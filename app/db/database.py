@@ -4,9 +4,10 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 BASE_DIR = Path(__file__).resolve().parents[2]  # cartella hoop_app/
 DB_PATH = BASE_DIR / "app.db"
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+DATABASE_URL = "postgresql://hoop:hoop@db:5432/hoop_db"
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 class Base(DeclarativeBase):
