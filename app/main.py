@@ -141,7 +141,7 @@ def list_brews(limit: int = 50, conn: Connection = Depends(get_conn)):
             (limit,),
         )
         rows = cur.fetchall() # scarica tutte le righe dalla query in una lista Python
-    return rows  # dict_row, lista di dizionari compatibile con Pydantic
+    return rows  # dict_row, compatibile con Pydantic
 
 # --- GET /brews/{brew_id} --- recupera singola brew
 @app.get("/brews/{brew_id}", response_model=BrewOut)
@@ -157,7 +157,7 @@ def get_brew(brew_id: int, conn: Connection = Depends(get_conn)):
             (brew_id,),
         )
         row = cur.fetchone()
-    if not row:
+    if not row: # se la riga non esiste
         raise HTTPException(status_code=404, detail="Brew not found")
     return row
 
@@ -165,7 +165,7 @@ def get_brew(brew_id: int, conn: Connection = Depends(get_conn)):
 @app.patch("/brews/{brew_id}", response_model=BrewOut)
 def update_brew(brew_id: int, payload: BrewUpdate, conn: Connection = Depends(get_conn)):
     # estrazione campi inviati
-    data = payload.model_dump(exclude_unset=True)
+    data = payload.model_dump(exclude_unset=True) # estrai solo i campi presenti nel JSON
 
     with conn.cursor() as cur:
         cur.execute(
@@ -176,11 +176,13 @@ def update_brew(brew_id: int, payload: BrewUpdate, conn: Connection = Depends(ge
             """,
             (brew_id,),
         )
+        # verifica esistenza campi
         current = cur.fetchone()
 
         if not current:
             raise HTTPException(status_code=404, detail="Brew not found")
 
+        # se si cambia dose o ratio l'acqua viene ricalcolata
         new_dose = data.get("dose", current["dose"])
         new_ratio = data.get("ratio", current["ratio"])
         if "dose" in data or "ratio" in data:
@@ -192,19 +194,23 @@ def update_brew(brew_id: int, payload: BrewUpdate, conn: Connection = Depends(ge
         if "notes" in data and isinstance(data["notes"], str):
             data["notes"] = data["notes"].strip() or None
 
+        # se non ci sono campi ritorna stato corrente
         if not data:
             return current
 
+        # query dinamica
+        # meto controllo altrimenti si potrebbero per es assumere privilegi di amministratore
         allowed = {"coffee","dose","ratio","water","temperature","grind","rating","notes"}
-        sets = []
-        values = []
-        for k, v in data.items():
+        sets = [] # clausole set
+        values = [] # valori da sostituire ai placeholder %s
+        for k, v in data.items(): # filtro, accetta solo campi autorizzati
             if k in allowed:
                 sets.append(f"{k} = %s")
                 values.append(v)
 
         values.append(brew_id)
 
+        # update SQL, query con f-string
         cur.execute(
             f"""
             UPDATE brews
@@ -212,27 +218,43 @@ def update_brew(brew_id: int, payload: BrewUpdate, conn: Connection = Depends(ge
             WHERE id = %s
             RETURNING id, coffee, dose, ratio, water, temperature, grind, rating, notes;
             """,
-            tuple(values),
+            tuple(values), # psycopg richiede una tupla o una sequenza immutabile
         )
         updated = cur.fetchone()
         conn.commit()
 
     return updated
 
+# --- DELETE /brews/{brew_id} --- elimina una brew dal db
 @app.delete("/brews/{brew_id}", status_code=204)
 def delete_brew(brew_id: int, conn: Connection = Depends(get_conn)):
     with conn.cursor() as cur:
-        cur.execute("DELETE FROM brews WHERE id = %s RETURNING id;", (brew_id,))
+        # query SQL
+        cur.execute("""
+            DELETE FROM brews 
+            WHERE id = %s 
+            RETURNING id;
+        """,
+        (brew_id,)
+        )
         row = cur.fetchone()
         conn.commit()
-    if not row:
+    if not row: # se la riga non esiste
         raise HTTPException(status_code=404, detail="Brew not found")
     return None
 
+# --- GET /brews/{brew_id}/tips --- suggerimenti
+# restituisce suggerimenti personalizzati basati sul rating immesso
 @app.get("/brews/{brew_id}/tips")
 def brew_tips(brew_id: int, conn: Connection = Depends(get_conn)):
     with conn.cursor() as cur:
-        cur.execute("SELECT rating FROM brews WHERE id = %s;", (brew_id,))
+        # query SQL - recupera solo il rating
+        cur.execute("""
+            SELECT rating FROM brews 
+            WHERE id = %s;
+        """,
+        (brew_id,)
+        )
         row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Brew not found")
