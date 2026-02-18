@@ -1,4 +1,4 @@
-# app/db/database.py  (NO SQLALCHEMY)
+# app/db/database.py
 import os
 from dotenv import load_dotenv
 import psycopg
