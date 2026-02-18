@@ -1,4 +1,30 @@
+# Ambienti virtuali
 .venv/
+
+# Python
 __pycache__/
+*.pyc
+*.pyo
+
+# Database
 *.db
+
+# Variabili d'ambiente e credenziali
 .env
+.env.*
+.env.py
+
+# IDE - PyCharm
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# Test e coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker override locali
+docker-compose.override.yml
