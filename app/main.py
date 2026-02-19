@@ -9,7 +9,7 @@ from psycopg import Connection
 
 from app.db.database import get_conn
 from app.db.init_db import init_db
-from app.domain.schemas import BrewCreate, BrewUpdate, BrewOut
+from app.domain.schemas import BrewCreate, BrewUpdate, BrewCreated, BrewOut, TipsOut, HealthOut
 from app.services.brew_service import tips_for_brew, calculate_water
 
 
@@ -30,13 +30,13 @@ app = FastAPI(
 
 # --- Endpoints ---
 
-@app.get("/", tags=["System"])
+@app.get("/", response_model=HealthOut, tags=["System"])
 def health():
     """Health check: verifica che il servizio sia attivo."""
     return {"status": "ok", "app": "hoop-api"}
 
 
-@app.post("/brews", response_model=dict, status_code=201, tags=["Brews"])
+@app.post("/brews", response_model=BrewCreated, status_code=201, tags=["Brews"])
 def create_brew(payload: BrewCreate, conn: Connection = Depends(get_conn)):
     """
     Crea una nuova registrazione di estrazione.
@@ -80,7 +80,7 @@ def list_brews(limit: int = 50, conn: Connection = Depends(get_conn)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, coffee, dose, ratio, water, temperature, grind, rating, notes
+            SELECT id, coffee, dose, ratio, water, temperature, grind, rating, notes, created_at
             FROM brews
             ORDER BY id DESC
             LIMIT %s;
@@ -97,7 +97,7 @@ def get_brew(brew_id: int, conn: Connection = Depends(get_conn)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, coffee, dose, ratio, water, temperature, grind, rating, notes
+            SELECT id, coffee, dose, ratio, water, temperature, grind, rating, notes, created_at
             FROM brews
             WHERE id = %s;
             """,
@@ -117,7 +117,7 @@ def update_brew(brew_id: int, payload: BrewUpdate, conn: Connection = Depends(ge
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, coffee, dose, ratio, water, temperature, grind, rating, notes
+            SELECT id, coffee, dose, ratio, water, temperature, grind, rating, notes, created_at
             FROM brews
             WHERE id = %s;
             """,
@@ -157,7 +157,7 @@ def update_brew(brew_id: int, payload: BrewUpdate, conn: Connection = Depends(ge
             UPDATE brews
             SET {", ".join(sets)}
             WHERE id = %s
-            RETURNING id, coffee, dose, ratio, water, temperature, grind, rating, notes;
+            RETURNING id, coffee, dose, ratio, water, temperature, grind, rating, notes, created_at;
             """,
             tuple(values),
         )
@@ -182,7 +182,7 @@ def delete_brew(brew_id: int, conn: Connection = Depends(get_conn)):
     return None
 
 
-@app.get("/brews/{brew_id}/tips", tags=["Brews"])
+@app.get("/brews/{brew_id}/tips", response_model=TipsOut, tags=["Brews"])
 def brew_tips(brew_id: int, conn: Connection = Depends(get_conn)):
     """Restituisce suggerimenti personalizzati basati sul rating della brew."""
     with conn.cursor() as cur:

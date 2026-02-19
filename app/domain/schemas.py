@@ -1,6 +1,7 @@
 # app/domain/schemas.py
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -34,10 +35,15 @@ class BrewUpdate(BaseModel):
     notes: Optional[str] = Field(None, max_length=500)
 
 
+class BrewCreated(BaseModel):
+    """Schema di risposta per la creazione di una brew. Restituisce solo l'id assegnato."""
+    id: int
+
+
 class BrewOut(BaseModel):
     """
     Schema di output per una brew.
-    Include tutti i parametri dell'estrazione più l'acqua calcolata dal server.
+    Include tutti i parametri dell'estrazione, l'acqua calcolata dal server e la data di creazione.
     """
     id: int
     coffee: str
@@ -48,3 +54,16 @@ class BrewOut(BaseModel):
     grind: str
     rating: Optional[int] = None
     notes: Optional[str] = None
+    created_at: datetime
+
+
+class TipsOut(BaseModel):
+    """Schema di risposta per i suggerimenti di una brew."""
+    brew_id: int
+    tips: list[str]
+
+
+class HealthOut(BaseModel):
+    """Schema di risposta per l'health check."""
+    status: str
+    app: str
