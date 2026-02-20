@@ -6,18 +6,21 @@ Costruita con **FastAPI** e **PostgreSQL**, permette di salvare ogni estrazione 
 
 ---
 
-## Flusso dei dati
+## Stack
+
+Python 3.12 / FastAPI
+PostgreSQL + psycopg
+Docker Compose
+
+## Schemi Pydantic
 
 Ogni estrazione transita attraverso schemi Pydantic che separano chiaramente input, aggiornamento e output:
 
-| Schema | Quando viene usato | Note |
-|--------|--------------------|------|
-| `BrewCreate` | `POST /brews` — creazione | Il client manda tutti i parametri; `water` è assente perché calcolato dal server |
-| `BrewUpdate` | `PATCH /brews/{id}` — aggiornamento parziale | Tutti i campi sono opzionali; se dose o ratio cambiano, `water` viene ricalcolato automaticamente |
-| `BrewCreated` | Risposta di `POST /brews` | Restituisce solo l'`id` assegnato al record appena creato |
-| `BrewOut` | Risposta di `GET` e `PATCH` | Include `id`, `water` e `created_at`; è il contratto completo su cosa il client riceve |
-| `TipsOut` | Risposta di `GET /brews/{id}/tips` | Contiene `brew_id` e la lista di suggerimenti basati sul rating |
-| `HealthOut` | Risposta di `GET /` | Conferma che il servizio è attivo |
+- `BrewCreate` — input del client (senza `water`, lo calcola il server)
+- `BrewUpdate` — tutti i campi opzionali per il PATCH
+- `BrewOut` — risposta completa, include `id`, `water`, `created_at`
+- `BrewCreated` — risposta del POST, restituisce solo l'`id`
+- `TipsOut` — risposta di `/tips`, contiene la lista di suggerimenti
 
 ---
 
@@ -26,37 +29,24 @@ Ogni estrazione transita attraverso schemi Pydantic che separano chiaramente inp
 ```
 hoop_app/
 ├── app/
-│   ├── main.py              # Entry point FastAPI, definizione degli endpoint
-│   ├── domain/
-│   │   └── schemas.py       # Modelli Pydantic (BrewCreate, BrewUpdate, BrewOut)
-│   ├── services/
-│   │   └── brew_service.py  # Business logic (calcolo acqua, suggerimenti)
+│   ├── main.py
+│   ├── domain/schemas.py
+│   ├── services/brew_service.py
 │   └── db/
-│       ├── database.py      # Connessione PostgreSQL (psycopg)
-│       └── init_db.py       # Creazione tabella al primo avvio
+│       ├── database.py
+│       └── init_db.py
 ├── tests/
-│   ├── conftest.py          # Fixture pytest (DB di test, TestClient)
-│   ├── test_api.py          # Test di integrazione degli endpoint
-│   └── test_brew_service.py # Test unitari della business logic
-├── docker-compose.yml       # PostgreSQL + API containerizzati
-├── .env.example             # Template variabili d'ambiente locali
-├── .env.docker.example      # Template variabili d'ambiente Docker
-├── requirements.txt         # Dipendenze di produzione
-└── requirements-dev.txt     # Dipendenze di sviluppo (pytest, ecc.)
+│   ├── conftest.py
+│   ├── test_api.py
+│   └── test_brew_service.py
+├── docker-compose.yml
+├── requirements.txt
+└── requirements-dev.txt
 ```
 
 ---
 
-## Requisiti
-
-- Python 3.12+
-- Docker e Docker Compose
-
----
-
 ## Avvio in locale
-
-### 1. Clona il repository e crea il virtual environment
 
 ```bash
 git clone https://github.com/MarcoCasciano/hoop_app.git
@@ -64,42 +54,21 @@ cd hoop_app
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 2. Configura le variabili d'ambiente
-
-```bash
 cp .env.example .env
-```
 
-Il file `.env.example` contiene già i valori per l'ambiente locale.
-
-### 3. Avvia il database
-
-```bash
 docker compose up -d db
-```
-
-### 4. Avvia l'API
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-L'API sarà disponibile su `http://localhost:8000`.
-La documentazione interattiva (Swagger UI) su `http://localhost:8000/docs`.
+API su `http://localhost:8000`
 
----
+docs su `http://localhost:8000/docs`
 
-## Avvio con Docker Compose
-
-Per avviare sia il database che l'API in un unico comando:
-
+Per avviare tutto con Docker:
 ```bash
 cp .env.docker.example .env.docker
 docker compose up
 ```
-
 ---
 
 ## Endpoint
