@@ -73,18 +73,17 @@ docker compose up
 
 ## Endpoint
 
-| Metodo | Endpoint | Descrizione |
-|--------|----------|-------------|
-| `GET` | `/` | Health check |
-| `POST` | `/brews` | Crea una nuova estrazione |
-| `GET` | `/brews` | Lista delle ultime estrazioni (default 50, max 200) |
-| `GET` | `/brews/{id}` | Dettaglio di una singola estrazione |
-| `PATCH` | `/brews/{id}` | Aggiornamento parziale di un'estrazione |
-| `DELETE` | `/brews/{id}` | Eliminazione di un'estrazione |
-| `GET` | `/brews/{id}/tips` | Suggerimenti per migliorare l'estrazione |
+- `GET /` — health check
+- `POST /brews` — crea una nuova estrazione
+- `GET /brews` — lista estrazioni (default 50, max 200)
+- `GET /brews/{id}` — dettaglio estrazione
+- `PATCH /brews/{id}` — aggiornamento parziale
+- `DELETE /brews/{id}` — elimina estrazione
+- `GET /brews/{id}/tips` — suggerimenti per migliorare l'estrazione
 
-### Esempio: crea una brew
+Il campo `water` non va passato: viene calcolato automaticamente dal server (`dose × ratio`).
 
+### Esempio
 ```bash
 curl -X POST http://localhost:8000/brews \
   -H "Content-Type: application/json" \
@@ -98,9 +97,6 @@ curl -X POST http://localhost:8000/brews \
     "notes": "floreale, acidità intensa"
   }'
 ```
-
-Il campo `water` viene calcolato automaticamente dal server (`dose × ratio`).
-
 ---
 
 ## Test
@@ -112,21 +108,11 @@ Avvia il database di test (se non è già in esecuzione):
 ```bash
 docker compose up -d db
 docker exec hoop_db psql -U hoop -d hoop_db -c "CREATE DATABASE hoop_test_db;"
-```
-
-Installa le dipendenze di sviluppo:
-
-```bash
 pip install -r requirements-dev.txt
-```
-
-### Esegui i test
-
-```bash
 pytest tests/ -v
 ```
 
-I test unitari (service layer) non richiedono il database e girano anche senza Docker:
+I test unitari girano anche senza database:
 
 ```bash
 pytest tests/test_brew_service.py -v
